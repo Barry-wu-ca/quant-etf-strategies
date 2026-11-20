@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>[CN-ETF Quant] Sanitized Sandbox Telemetry Dashboard (v1.0.1)</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --teal: #0d9488;
+      --teal-bg: #f0fdfa;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --green: #16a34a;
+      --green-bg: #f0fdf4;
+      --slate: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.55;
+      padding: 24px 16px;
+    }
+    .container { max-width: 1040px; margin: 0 auto; }
+    .header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: var(--slate);
+    }
+    .badge.green { background: var(--green-bg); color: var(--green); border: 1px solid #bbf7d0; }
+    .badge.teal { background: var(--teal-bg); color: var(--teal); border: 1px solid #99f6e4; }
+    h1 { font-size: 20px; font-weight: 700; color: var(--text-main); }
+    .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .status-box {
+      background: var(--green-bg);
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #166534;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .kpi-label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .kpi-value { font-size: 26px; font-weight: 700; margin-top: 6px; color: var(--text-main); }
+    .kpi-value.pos { color: var(--green); }
+    .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .alloc-bar-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 18px;
+    }
+    .section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .bar-track {
+      height: 16px;
+      background: #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .seg-core { width: 0%; background: var(--teal); transition: width 0.4s ease; }
+    .seg-tact { width: 0%; background: var(--amber); transition: width 0.4s ease; }
+    .seg-cash { width: 100%; background: #22c55e; transition: width 0.4s ease; }
+    .legend { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--slate); }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 18px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { background: #f8fafc; color: var(--text-muted); font-weight: 600; font-size: 12px; }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .pill.hold { background: #f1f5f9; color: #475569; }
+    .pill.pass { background: var(--green-bg); color: var(--green); }
+    .btn-group { display: flex; gap: 8px; }
+    button {
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.active, button:hover { background: var(--text-main); color: #ffffff; border-color: var(--text-main); }
+    .guardrails {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      font-size: 13px;
+      color: var(--slate);
+    }
+    .guard-item { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 20px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="badge-row">
+          <span class="badge teal">v1.0.1 · Dynamic Discovery Sandbox</span>
+          <span class="badge">Sanitized Public Demo (Normalized NAV)</span>
+          <span class="badge">2-Bay NAS Edge Runtime</span>
+        </div>
+        <h1>[CN-ETF Quant] 2-Week Out-of-Sample Sandbox Telemetry</h1>
+        <p class="subtitle">Core-Satellite Architecture (Up to 50% Core + Up to 40% Tactical + ≥10% Cash Buffer) · Post-Close Batch Settlement (UTC+8)</p>
+      </div>
+      <div class="status-box">
+        <strong>muse_trigger.flag = 1</strong> · Pipeline Healthy<br/>
+        <span>SHA-256 Order Seal Active · Independent Audit Ready</span>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Normalized NAV / 归一化净值</div>
+        <div class="kpi-value" id="kpi-nav">1.0001</div>
+        <div class="kpi-sub">Baseline Inception = 1.0000 (Redacted Capital)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cumulative Return / 累计收益率</div>
+        <div class="kpi-value pos" id="kpi-ret">+0.01%</div>
+        <div class="kpi-sub">Money-Market Proxy Yield Active During Flat Regimes</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Max Drawdown / 累计最大回撤</div>
+        <div class="kpi-value" id="kpi-mdd">0.00%</div>
+        <div class="kpi-sub">Account-Level Circuit Breaker Armed</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cash & Proxy Allocation / 现金占比</div>
+        <div class="kpi-value" id="kpi-cash">100.0%</div>
+        <div class="kpi-sub" id="kpi-mode">Regime Gate: Defensive Cash Preservation</div>
+      </div>
+    </div>
+
+    <div class="alloc-bar-wrap">
+      <div class="section-title">
+        <span>Portfolio Allocation vs. Target Caps / 当前仓位分布与目标上限</span>
+        <div class="btn-group">
+          <button class="active" onclick="setScenario('defensive', this)">Scenario A: Defensive Flat (Current)</button>
+          <button onclick="setScenario('active', this)">Scenario B: Trend Active (Simulated)</button>
+        </div>
+      </div>
+      <div class="bar-track">
+        <div class="seg-core" id="bar-core"></div>
+        <div class="seg-tact" id="bar-tact"></div>
+        <div class="seg-cash" id="bar-cash"></div>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background: var(--teal);"></i>Core Trend Sleeve: <strong id="txt-core">0.0%</strong> (Cap: 50%, Max 2 Slots)</span>
+        <span><i class="dot" style="background: var(--amber);"></i>Tactical Momentum Sleeve: <strong id="txt-tact">0.0%</strong> (Cap: 40%, Max 2 Slots)</span>
+        <span><i class="dot" style="background: #22c55e;"></i>Cash & Money-Market Proxy: <strong id="txt-cash">100.0%</strong> (Floor: 10%)</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="section-title">
+        <span>Next-Session Sealed Order Plan / 下一交易日盘后封存清单 (SHA-256)</span>
+        <span style="font-size: 12px; color: var(--text-muted); font-family: monospace;">Seal Hash: 8f94e2c1...b704a9d3</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Sleeve / 所属舱位</th>
+            <th>Candidate Bucket / 候选类别</th>
+            <th>Action / 指令方向</th>
+            <th>Target Weight / 目标权重</th>
+            <th>Gate Verification / 风控门校验</th>
+          </tr>
+        </thead>
+        <tbody id="order-tbody">
+          <tr>
+            <td>Core Trend Sleeve</td>
+            <td>Multi-Asset Core Pool (Global Equity / Gold / Broad Index)</td>
+            <td><span class="pill hold">HOLD CASH / 暂不买入</span></td>
+            <td>0.0%</td>
+            <td>Awaiting Long-Term MA Buffer & Short-Term Slope Confirmation</td>
+          </tr>
+          <tr>
+            <td>Tactical Momentum Sleeve</td>
+            <td>Daily Market-Wide Discovery Watchlist</td>
+            <td><span class="pill hold">HOLD CASH / 暂不买入</span></td>
+            <td>0.0%</td>
+            <td>Filtered by Regime Gate, ADX Strength & Volatility ATR Band</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="section-title">
+        <span>Execution Microstructure & Governance Guardrails / 交易摩擦与独立审计约束</span>
+      </div>
+      <div class="guardrails">
+        <div class="guard-item">
+          <strong>1. Zero Look-Ahead Pricing</strong><br/>
+          Post-close batch (17:35 UTC+8) settles prior orders strictly using the actual first 5-minute opening bar (09:30–09:35).
+        </div>
+        <div class="guard-item">
+          <strong>2. Friction-Aware Simulation</strong><br/>
+          Enforces tiered minimum commission floor, bidirectional basis-point slippage, 100-share lot rounding, and T+1/T+0 settlement rules.
+        </div>
+        <div class="guard-item">
+          <strong>3. Anti-Churn Slot Discipline</strong><br/>
+          Existing holdings are never rotated solely due to daily rank changes; qualified candidates fill vacant slots only after exit triggers.
+        </div>
+        <div class="guard-item">
+          <strong>4. Tri-Agent Separation of Duties</strong><br/>
+          Strategy Design (Gemini) + Execution Pipeline (Codex) + Independent Compliance Sign-Off (Meta Muse) via decoupled JSON ledgers.
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Sanitized Reference Telemetry UI for GitHub Portfolio · Specific ticker codes, threshold parameters, capital amounts, and private network endpoints have been redacted.
+    </div>
+  </div>
+
+  <script>
+    function setScenario(mode, btn) {
+      document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (mode === 'defensive') {
+        document.getElementById('kpi-nav').textContent = '1.0001';
+        document.getElementById('kpi-ret').textContent = '+0.01%';
+        document.getElementById('kpi-mdd').textContent = '0.00%';
+        document.getElementById('kpi-cash').textContent = '100.0%';
+        document.getElementById('kpi-mode').textContent = 'Regime Gate: Defensive Cash Preservation';
+
+        document.getElementById('bar-core').style.width = '0%';
+        document.getElementById('bar-tact').style.width = '0%';
+        document.getElementById('bar-cash').style.width = '100%';
+        document.getElementById('txt-core').textContent = '0.0%';
+        document.getElementById('txt-tact').textContent = '0.0%';
+        document.getElementById('txt-cash').textContent = '100.0%';
+
+        document.getElementById('order-tbody').innerHTML = `
+          <tr>
+            <td>Core Trend Sleeve</td>
+            <td>Multi-Asset Core Pool (Global Equity / Gold / Broad Index)</td>
+            <td><span class="pill hold">HOLD CASH / 暂不买入</span></td>
+            <td>0.0%</td>
+            <td>Awaiting Long-Term MA Buffer & Short-Term Slope Confirmation</td>
+          </tr>
+          <tr>
+            <td>Tactical Momentum Sleeve</td>
+            <td>Daily Market-Wide Discovery Watchlist</td>
+            <td><span class="pill hold">HOLD CASH / 暂不买入</span></td>
+            <td>0.0%</td>
+            <td>Filtered by Regime Gate, ADX Strength & Volatility ATR Band</td>
+          </tr>`;
+      } else {
+        document.getElementById('kpi-nav').textContent = '1.1199';
+        document.getElementById('kpi-ret').textContent = '+11.99%';
+        document.getElementById('kpi-mdd').textContent = '-11.16%';
+        document.getElementById('kpi-cash').textContent = '10.0%';
+        document.getElementById('kpi-mode').textContent = 'Regime Gate: Trend Expansion (Benchmark Example)';
+
+        document.getElementById('bar-core').style.width = '50%';
+        document.getElementById('bar-tact').style.width = '40%';
+        document.getElementById('bar-cash').style.width = '10%';
+        document.getElementById('txt-core').textContent = '50.0%';
+        document.getElementById('txt-tact').textContent = '40.0%';
+        document.getElementById('txt-cash').textContent = '10.0%';
+
+        document.getElementById('order-tbody').innerHTML = `
+          <tr>
+            <td>Core Trend Sleeve (2/2 Slots)</td>
+            <td>Cross-Asset Core Instruments (Sanitized)</td>
+            <td><span class="pill pass">ACTIVE TREND / 持有中</span></td>
+            <td>50.0% (25% × 2)</td>
+            <td>Above Long-Term MA Buffer · Trailing Long-Term MA Stop Active</td>
+          </tr>
+          <tr>
+            <td>Tactical Momentum Sleeve (2/2 Slots)</td>
+            <td>Top Risk-Adjusted Sector ETFs (Sanitized)</td>
+            <td><span class="pill pass">ACTIVE TREND / 持有中</span></td>
+            <td>40.0% (20% × 2)</td>
+            <td>ADX & ATR Band Passed · Asymmetric Trailing ATR Stop Armed</td>
+          </tr>`;
+      }
+    }
+  </script>
+</body>
+</html>
